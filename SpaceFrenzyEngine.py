@@ -20,23 +20,20 @@ class SpaceFrenzyEngine:
         # init objects
         background = pygame.Surface(SpaceFrenzyEngine.SCREEN_RECT.size)
         background.fill((0, 0, 0))
-        # update_group = pygame.sprite.Group()
+        update_group = pygame.sprite.Group()
         draw_group = pygame.sprite.RenderClear()
         space_craft = SpaceCraft(self.main_dir,
                                  SpaceFrenzyEngine.SCREEN_WIDTH / 2,
                                  SpaceFrenzyEngine.SCREEN_HEIGHT / 2,
-                                 draw_group)
+                                 draw_group, update_group)
 
         while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-
             dt = clock.tick(60)
             draw_group.clear(display_surface, background)
-            # update_group.update(dt)
-            space_craft.update(dt)
+            space_craft.update(dt, pygame.event.get(eventtype=[pygame.KEYUP, pygame.KEYDOWN], pump=False))
+            update_group.update(dt)
             dirty_rects = draw_group.draw(display_surface)
             pygame.display.update(dirty_rects)
+            running = len(pygame.event.get(eventtype=pygame.QUIT, pump=True)) == 0
 
         pygame.quit()

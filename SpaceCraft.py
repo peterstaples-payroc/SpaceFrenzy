@@ -39,38 +39,77 @@ class SpaceCraftSprite(pygame.sprite.Sprite):
         self.rect.top = self._position['y'] - (self.rect.height / 2)
 
 
+class SpaceCraftBullet(pygame.sprite.Sprite):
+    DIAMETER = 2
+    SPEED = 250  # pixels/s
+
+    def __init__(self, position, initial_speed, direction, active_rect):
+        super().__init__()
+        self._active_rect = active_rect
+        self._position = position
+        self._direction = direction
+        self._velocity = initial_speed
+        self._velocity['horizontal'] += SpaceCraftBullet.SPEED * math.sin(math.radians(self._direction))
+        self._velocity['vertical'] += SpaceCraftBullet.SPEED * math.cos(math.radians(self._direction))
+        surface = pygame.Surface((SpaceCraftBullet.DIAMETER, SpaceCraftBullet.DIAMETER))
+        surface.fill([255, 0, 0])
+        self.image = surface
+        self.rect = self.image.get_rect()
+        self.rect.centerx = self._position['x']
+        self.rect.centery = self._position['y']
+
+    def update(self, delta_time):
+        self._position['x'] += self._velocity['horizontal'] * (delta_time / 1000)
+        self._position['y'] += -self._velocity['vertical'] * (delta_time / 1000)
+        self.rect.centerx = self._position['x']
+        self.rect.centery = self._position['y']
+        if not self._active_rect.colliderect(self.rect):
+            self.kill()
+
+
 class SpaceCraft:
-    def __init__(self, main_dir, x_pos_center, y_pos_center, *groups: pygame.sprite.Group):
+    ACCELERATION = 0.250  # pixels/ms2 = 250 pixels/s2
+    ROTATION_RATE = 0.180  # degrees/ms = 180 degrees/s
+    AUTOMATIC_FIRE_PERIOD = 0.500  # ms => 2 bullets/s
+    AUTOMATIC_FIRE_THRESHOLD = 1000  # ms = 1s
+
+    def __init__(self, main_dir: str, x_pos_center: float, y_pos_center: float,
+                 draw_group: pygame.sprite.Group, update_group: pygame.sprite.Group):
         self._keys_pressed = {
             'up': False,
             'down': False,
             'left': False,
             'right': False
         }
-        self._speed = {'horizontal': 0, 'vertical': 0}  # pixels/s
-        self._acceleration = 0.250  # pixels/ms2 = 250 pixels/s2
+        # note: velocity component axis are +ve up and right.  Surface axis is +ve down and right
+        self._velocity = {'horizontal': 0, 'vertical': 0}  # pixels/ms
         self._rotation = 0  # degrees clockwise from vertical up, +/-180
-        self._rotation_rate = 0.180  # degrees/ms = 180 degrees/s
         self._wrapped = False
+        self._automatic_fire_mode = False
+        self._automatic_fire_start_time = 0
+        self._automatic_fire_prev_fire_time = 0
+        self._bullets = []
 
         self._main_sprite = SpaceCraftSprite(main_dir, 'spacecraft.png')
         self._wrapped_sprite = SpaceCraftSprite(main_dir, 'spacecraft.png')
         self._main_sprite.position = {'x': x_pos_center, 'y': y_pos_center}
-        self._groups = groups
-        self._main_sprite.add(groups)
+        self._draw_group = draw_group
+        self._update_group = update_group
+        self._main_sprite.add(draw_group)
         self._display_surface = pygame.display.get_surface()
 
     # todo: abstract out keystrokes to an InputController (KeyHandler) and a CommandController (SpaceCraftCommand)
     # KeyHandler will direct keystrokes to the appropriate CommandController
     # SpaceCraftCommand will take those keystrokes and call accelerate/rotate/etc on the SpaceCraft
-    def update(self, ms_in_cycle):
-        self._process_keys()
+    def update(self, ms_in_cycle, key_events):
+        self._process_keys(key_events)
         self._update_rotation(ms_in_cycle)
-        self._update_speed(ms_in_cycle)
+        self._update_velocity(ms_in_cycle)
         self._update_position(ms_in_cycle)
         self._check_wrapped()
+        self._fire_gun()
 
-    def _process_keys(self):
+    def _process_keys(self, key_events):
         key_inputs = pygame.key.get_pressed()
         if not self._keys_pressed['up'] and not self._keys_pressed['down']:
             self._keys_pressed['up'] = key_inputs[pygame.K_UP] and not key_inputs[pygame.K_DOWN]
@@ -78,11 +117,11 @@ class SpaceCraft:
             # when both opposing keys pressed without a prior then no action will be taken
 
         # a previously pressed key that is still depressed takes priority over its opposite.
-        if self._keys_pressed['up'] and not self._keys_pressed['down']:
+        elif self._keys_pressed['up'] and not self._keys_pressed['down']:
             self._keys_pressed['up'] = key_inputs[pygame.K_UP]
             self._keys_pressed['down'] = not key_inputs[pygame.K_UP] and key_inputs[pygame.K_DOWN]
 
-        if not self._keys_pressed['up'] and self._keys_pressed['down']:
+        elif not self._keys_pressed['up'] and self._keys_pressed['down']:
             self._keys_pressed['up'] = key_inputs[pygame.K_UP] and not key_inputs[pygame.K_DOWN]
             self._keys_pressed['down'] = key_inputs[pygame.K_DOWN]
 
@@ -92,25 +131,39 @@ class SpaceCraft:
             # when both opposing keys pressed without a prior then no action will be taken
 
         # a previously pressed key that is still depressed takes priority over its opposite.
-        if self._keys_pressed['left'] and not self._keys_pressed['right']:
+        elif self._keys_pressed['left'] and not self._keys_pressed['right']:
             self._keys_pressed['left'] = key_inputs[pygame.K_LEFT]
             self._keys_pressed['right'] = not key_inputs[pygame.K_LEFT] and key_inputs[pygame.K_RIGHT]
 
-        if not self._keys_pressed['left'] and self._keys_pressed['right']:
+        elif not self._keys_pressed['left'] and self._keys_pressed['right']:
             self._keys_pressed['left'] = key_inputs[pygame.K_LEFT] and not key_inputs[pygame.K_RIGHT]
             self._keys_pressed['right'] = key_inputs[pygame.K_RIGHT]
+
+        # basic fire control is tap key for manual fire, hold key for automatic fire
+        self._keys_pressed['fire'] = False
+        for event in key_events:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_x:
+                self._keys_pressed['fire'] = True  # manual fire based on key press
+                self._automatic_fire_start_time = pygame.time.get_ticks()  # automatic fire based on time
+            elif event.type == pygame.KEYUP and event.key == pygame.K_x:
+                self._automatic_fire_start_time = 0
+
+        self._automatic_fire_mode = False
+        if (self._automatic_fire_start_time > 0
+                and (pygame.time.get_ticks() - self._automatic_fire_start_time) > SpaceCraft.AUTOMATIC_FIRE_THRESHOLD):
+            self._automatic_fire_mode = True
 
     def _update_rotation(self, ms_in_cycle):
         rotated = False
         # assume cannot rotate more than 180d in one cycle
         if self._keys_pressed['left']:
-            self._rotation += -self._rotation_rate * ms_in_cycle
+            self._rotation += -SpaceCraft.ROTATION_RATE * ms_in_cycle
             if self._rotation < -180:
                 self._rotation = 180 + (self._rotation + 180)
             rotated = True
 
         if self._keys_pressed['right']:
-            self._rotation += self._rotation_rate * ms_in_cycle
+            self._rotation += SpaceCraft.ROTATION_RATE * ms_in_cycle
             if self._rotation > 180:
                 self._rotation = -180 + (self._rotation - 180)
             rotated = True
@@ -118,22 +171,22 @@ class SpaceCraft:
         if rotated:
             self._main_sprite.rotation = self._rotation
 
-    def _update_speed(self, ms_in_cycle):
+    def _update_velocity(self, ms_in_cycle):
         if self._keys_pressed['up']:
-            self._speed['vertical'] += self._acceleration * ms_in_cycle * math.cos(math.radians(self._rotation))
-            self._speed['horizontal'] += self._acceleration * ms_in_cycle * math.sin(math.radians(self._rotation))
+            self._velocity['vertical'] += SpaceCraft.ACCELERATION * ms_in_cycle * math.cos(math.radians(self._rotation))
+            self._velocity['horizontal'] += SpaceCraft.ACCELERATION * ms_in_cycle * math.sin(math.radians(self._rotation))
 
         if self._keys_pressed['down']:
-            self._speed['vertical'] -= self._acceleration * ms_in_cycle * math.cos(math.radians(self._rotation))
-            self._speed['horizontal'] -= self._acceleration * ms_in_cycle * math.sin(math.radians(self._rotation))
+            self._velocity['vertical'] -= SpaceCraft.ACCELERATION * ms_in_cycle * math.cos(math.radians(self._rotation))
+            self._velocity['horizontal'] -= SpaceCraft.ACCELERATION * ms_in_cycle * math.sin(math.radians(self._rotation))
         # todo: if speed exceeds (4 * screen height) pixels/s then show warning that approaching 80% speed of light,
         # relativistic effects weakening structural integrity, failure imminent.
         # When speed = (5 * screen height) pixels/s then spacecraft implodes
 
     def _update_position(self, ms_in_cycle):
-        dx = self._speed['horizontal'] * (ms_in_cycle / 1000)
+        dx = self._velocity['horizontal'] * (ms_in_cycle / 1000)
         # vertical screen axis is +ve downwards => -ve displacement
-        dy = -self._speed['vertical'] * (ms_in_cycle / 1000)
+        dy = -self._velocity['vertical'] * (ms_in_cycle / 1000)
         new_position = self._main_sprite.position.copy()
         new_position['x'] += dx
         new_position['y'] += dy
@@ -174,6 +227,42 @@ class SpaceCraft:
                 self._main_sprite.position = wrapped_sprite_position
                 self._wrapped_sprite.kill()
             else:
-                self._wrapped_sprite.add(self._groups)
+                self._wrapped_sprite.add(self._draw_group)
         else:
             self._wrapped_sprite.kill()
+
+    def _fire_gun(self):
+        if self._keys_pressed['fire'] and not self._automatic_fire_mode:
+            self._create_bullet()
+
+        # if (self._automatic_fire_mode and
+        #         (pygame.time.get_ticks() - self._automatic_fire_prev_fire_time) > SpaceCraft.AUTOMATIC_FIRE_PERIOD):
+        #     self._create_bullet()
+        #     self._automatic_fire_prev_fire_time = pygame.time.get_ticks()
+
+    def _create_bullet(self):
+        display_rect = self._display_surface.get_rect()
+        # get bullet position.
+        # determine which sprite has its gun point on screen.
+        # get gun point from main sprite. check if it collides with the screen rectangle.
+        # if it doesn't then the wrapped sprite must have its gun point in the screen
+        firing_sprite = self._main_sprite
+        gun_point = self._get_gun_point(self._main_sprite)
+        if not display_rect.collidepoint(gun_point['x'], gun_point['y']):
+            firing_sprite = self._wrapped_sprite
+        # recalculate the starting center point of the bullet as an extension of the sprite
+        bullet_center = self._get_gun_point(firing_sprite, SpaceCraftBullet.DIAMETER)
+
+        bullet = SpaceCraftBullet(bullet_center, self._velocity.copy(), self._rotation, display_rect)
+        self._bullets.append(bullet)
+        bullet.add([self._draw_group, self._update_group])
+
+    def _get_gun_point(self, sprite, offset=0) -> dict[str, float]:
+        # the gun point is the top center of the sprite when in its original position.
+        # calculate its rotated position
+        gun_center_displacement = (sprite.original_image.get_rect().height + offset) / 2
+        gun_point = {
+            'x': sprite.position['x'] + (gun_center_displacement * math.sin(math.radians(self._rotation))),
+            'y': sprite.position['y'] - (gun_center_displacement * math.cos(math.radians(self._rotation)))
+        }
+        return gun_point
