@@ -71,6 +71,10 @@ class SpaceCraft:
         self._main_sprite.add(draw_group)
         self._display_surface = pygame.display.get_surface()
 
+    @property
+    def bullets(self):
+        return self._bullets
+
     # todo: abstract out keystrokes to an InputController (KeyHandler) and a CommandController (SpaceCraftCommand)
     # KeyHandler will direct keystrokes to the appropriate CommandController
     # SpaceCraftCommand will take those keystrokes and call accelerate/rotate/etc on the SpaceCraft
@@ -226,7 +230,7 @@ class SpaceCraft:
         # recalculate the starting center point of the bullet as an extension of the sprite
         bullet_center = self._get_gun_point(firing_sprite, SpaceCraftBullet.DIAMETER)
 
-        bullet = SpaceCraftBullet(bullet_center, self._velocity.copy(), self._rotation, display_rect)
+        bullet = SpaceCraftBullet(bullet_center, self._velocity.copy(), self._rotation)
         self._bullets.append(bullet)
         bullet.add([self._draw_group, self._update_group])
 

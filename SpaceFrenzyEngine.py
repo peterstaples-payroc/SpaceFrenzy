@@ -1,6 +1,7 @@
 import pygame
 
 from AsteroidGenerator import AsteroidGenerator
+from CollisionManager import CollisionManager
 from SpaceCraft import SpaceCraft
 
 
@@ -29,6 +30,7 @@ class SpaceFrenzyEngine:
                                  SpaceFrenzyEngine.SCREEN_HEIGHT / 2,
                                  draw_group, update_group)
         asteroid_generator = AsteroidGenerator(draw_group, update_group)
+        collision_manager = CollisionManager(space_craft, asteroid_generator)
 
         while running:
             dt = clock.tick(60)
@@ -36,6 +38,7 @@ class SpaceFrenzyEngine:
             space_craft.update(dt, pygame.event.get(eventtype=[pygame.KEYUP, pygame.KEYDOWN], pump=False))
             asteroid_generator.update()
             update_group.update(dt)
+            collision_manager.update()
             dirty_rects = draw_group.draw(display_surface)
             pygame.display.update(dirty_rects)
             running = len(pygame.event.get(eventtype=pygame.QUIT, pump=True)) == 0

@@ -1,7 +1,6 @@
 import math
 import random
 import pygame.time
-
 from Asteroid import Asteroid
 
 
@@ -25,18 +24,11 @@ class AsteroidGenerator:
         self._asteroid_level_count = self._level  # number of asteroids generated so far in this level.  Set to level to trigger new level
         self._asteroids = []  # the asteroids remaining in this level
         self._prev_generation_time = 0  # the previous time an asteroid was generated
+        random.seed()
 
     @property
-    def level(self):
-        return self._level
-
-    @level.setter
-    def level(self, value):
-        if value < AsteroidGenerator.MINIMUM_LEVEL:
-            value = AsteroidGenerator.MINIMUM_LEVEL
-        elif value > AsteroidGenerator.MAXIMUM_LEVEL:
-            value = AsteroidGenerator.MAXIMUM_LEVEL
-        self._level = value
+    def asteroids(self) -> list[Asteroid]:
+        return self._asteroids
 
     def update(self):
         # generation rules
@@ -46,17 +38,19 @@ class AsteroidGenerator:
         # -number of asteroids per level = level
 
         # level complete
+        elapsed_time = pygame.time.get_ticks() - self._prev_generation_time
         if self._asteroid_level_count == self._level and len(self._asteroids) == 0:
             self._level += 1
-            self._asteroid_level_count = 0
+            print('Level ', self._level)
             period_reduction = ((AsteroidGenerator.MAXIMUM_GENERATION_PERIOD - AsteroidGenerator.MINIMUM_GENERATION_PERIOD) / AsteroidGenerator.MAXIMUM_LEVEL) * (self._level - 1)
             self._level_generation_period = AsteroidGenerator.MAXIMUM_GENERATION_PERIOD - period_reduction
             self._generate()
             self._prev_generation_time = pygame.time.get_ticks()
-        elif (pygame.time.get_ticks() - self._prev_generation_time > self._level_generation_period
-                and self._asteroid_level_count < self._level):
+            self._asteroid_level_count = 1
+        elif elapsed_time > self._level_generation_period or len(self._asteroids) == 0:
             self._generate()
             self._prev_generation_time = pygame.time.get_ticks()
+            self._asteroid_level_count += 1
 
     def _generate(self):
         # generation process
@@ -65,7 +59,6 @@ class AsteroidGenerator:
         # -select random position on-screen, get calculate velocity between that point and asteroid center point
         # -create asteroid
 
-        random.seed()
         diameter = random.randint(AsteroidGenerator.MINIMUM_DIAMETER, AsteroidGenerator.MAXIMUM_DIAMETER)
         # top=0, right=1, bottom=2, left=3
         # could use an outer rectangle to get values, as for inner_rect
