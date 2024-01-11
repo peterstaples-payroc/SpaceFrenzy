@@ -1,4 +1,6 @@
 import pygame
+
+from AsteroidGenerator import AsteroidGenerator
 from SpaceCraft import SpaceCraft
 
 
@@ -26,11 +28,13 @@ class SpaceFrenzyEngine:
                                  SpaceFrenzyEngine.SCREEN_WIDTH / 2,
                                  SpaceFrenzyEngine.SCREEN_HEIGHT / 2,
                                  draw_group, update_group)
+        asteroid_generator = AsteroidGenerator(draw_group, update_group)
 
         while running:
             dt = clock.tick(60)
             draw_group.clear(display_surface, background)
             space_craft.update(dt, pygame.event.get(eventtype=[pygame.KEYUP, pygame.KEYDOWN], pump=False))
+            asteroid_generator.update()
             update_group.update(dt)
             dirty_rects = draw_group.draw(display_surface)
             pygame.display.update(dirty_rects)

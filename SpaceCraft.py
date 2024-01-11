@@ -1,6 +1,7 @@
 import math
 import os
 import pygame
+from SpaceCraftBullet import SpaceCraftBullet
 
 
 class SpaceCraftSprite(pygame.sprite.Sprite):
@@ -39,34 +40,6 @@ class SpaceCraftSprite(pygame.sprite.Sprite):
         self.rect.top = self._position['y'] - (self.rect.height / 2)
 
 
-class SpaceCraftBullet(pygame.sprite.Sprite):
-    DIAMETER = 2
-    SPEED = 250  # pixels/s
-
-    def __init__(self, position, initial_speed, direction, active_rect):
-        super().__init__()
-        self._active_rect = active_rect
-        self._position = position
-        self._direction = direction
-        self._velocity = initial_speed
-        self._velocity['horizontal'] += SpaceCraftBullet.SPEED * math.sin(math.radians(self._direction))
-        self._velocity['vertical'] += SpaceCraftBullet.SPEED * math.cos(math.radians(self._direction))
-        surface = pygame.Surface((SpaceCraftBullet.DIAMETER, SpaceCraftBullet.DIAMETER))
-        surface.fill([255, 0, 0])
-        self.image = surface
-        self.rect = self.image.get_rect()
-        self.rect.centerx = self._position['x']
-        self.rect.centery = self._position['y']
-
-    def update(self, delta_time):
-        self._position['x'] += self._velocity['horizontal'] * (delta_time / 1000)
-        self._position['y'] += -self._velocity['vertical'] * (delta_time / 1000)
-        self.rect.centerx = self._position['x']
-        self.rect.centery = self._position['y']
-        if not self._active_rect.colliderect(self.rect):
-            self.kill()
-
-
 class SpaceCraft:
     ACCELERATION = 0.250  # pixels/ms2 = 250 pixels/s2
     ROTATION_RATE = 0.180  # degrees/ms = 180 degrees/s
@@ -101,11 +74,11 @@ class SpaceCraft:
     # todo: abstract out keystrokes to an InputController (KeyHandler) and a CommandController (SpaceCraftCommand)
     # KeyHandler will direct keystrokes to the appropriate CommandController
     # SpaceCraftCommand will take those keystrokes and call accelerate/rotate/etc on the SpaceCraft
-    def update(self, ms_in_cycle, key_events):
+    def update(self, delta_time, key_events):
         self._process_keys(key_events)
-        self._update_rotation(ms_in_cycle)
-        self._update_velocity(ms_in_cycle)
-        self._update_position(ms_in_cycle)
+        self._update_rotation(delta_time)
+        self._update_velocity(delta_time)
+        self._update_position(delta_time)
         self._check_wrapped()
         self._fire_gun()
 
@@ -153,17 +126,17 @@ class SpaceCraft:
                 and (pygame.time.get_ticks() - self._automatic_fire_start_time) > SpaceCraft.AUTOMATIC_FIRE_THRESHOLD):
             self._automatic_fire_mode = True
 
-    def _update_rotation(self, ms_in_cycle):
+    def _update_rotation(self, delta_time):
         rotated = False
         # assume cannot rotate more than 180d in one cycle
         if self._keys_pressed['left']:
-            self._rotation += -SpaceCraft.ROTATION_RATE * ms_in_cycle
+            self._rotation += -SpaceCraft.ROTATION_RATE * delta_time
             if self._rotation < -180:
                 self._rotation = 180 + (self._rotation + 180)
             rotated = True
 
         if self._keys_pressed['right']:
-            self._rotation += SpaceCraft.ROTATION_RATE * ms_in_cycle
+            self._rotation += SpaceCraft.ROTATION_RATE * delta_time
             if self._rotation > 180:
                 self._rotation = -180 + (self._rotation - 180)
             rotated = True
@@ -171,22 +144,22 @@ class SpaceCraft:
         if rotated:
             self._main_sprite.rotation = self._rotation
 
-    def _update_velocity(self, ms_in_cycle):
+    def _update_velocity(self, delta_time):
         if self._keys_pressed['up']:
-            self._velocity['vertical'] += SpaceCraft.ACCELERATION * ms_in_cycle * math.cos(math.radians(self._rotation))
-            self._velocity['horizontal'] += SpaceCraft.ACCELERATION * ms_in_cycle * math.sin(math.radians(self._rotation))
+            self._velocity['vertical'] += SpaceCraft.ACCELERATION * delta_time * math.cos(math.radians(self._rotation))
+            self._velocity['horizontal'] += SpaceCraft.ACCELERATION * delta_time * math.sin(math.radians(self._rotation))
 
         if self._keys_pressed['down']:
-            self._velocity['vertical'] -= SpaceCraft.ACCELERATION * ms_in_cycle * math.cos(math.radians(self._rotation))
-            self._velocity['horizontal'] -= SpaceCraft.ACCELERATION * ms_in_cycle * math.sin(math.radians(self._rotation))
+            self._velocity['vertical'] -= SpaceCraft.ACCELERATION * delta_time * math.cos(math.radians(self._rotation))
+            self._velocity['horizontal'] -= SpaceCraft.ACCELERATION * delta_time * math.sin(math.radians(self._rotation))
         # todo: if speed exceeds (4 * screen height) pixels/s then show warning that approaching 80% speed of light,
         # relativistic effects weakening structural integrity, failure imminent.
         # When speed = (5 * screen height) pixels/s then spacecraft implodes
 
-    def _update_position(self, ms_in_cycle):
-        dx = self._velocity['horizontal'] * (ms_in_cycle / 1000)
+    def _update_position(self, delta_time):
+        dx = self._velocity['horizontal'] * (delta_time / 1000)
         # vertical screen axis is +ve downwards => -ve displacement
-        dy = -self._velocity['vertical'] * (ms_in_cycle / 1000)
+        dy = -self._velocity['vertical'] * (delta_time / 1000)
         new_position = self._main_sprite.position.copy()
         new_position['x'] += dx
         new_position['y'] += dy
