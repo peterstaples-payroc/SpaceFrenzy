@@ -5,6 +5,8 @@ from SpaceCraftBullet import SpaceCraftBullet
 
 
 class SpaceCraftSprite(pygame.sprite.Sprite):
+    CLIP_VERTICAL_OFFSET = 3
+
     def __init__(self, main_dir, file_name):
         super().__init__()
         self._position = {'x': 0, 'y': 0}
@@ -14,6 +16,8 @@ class SpaceCraftSprite(pygame.sprite.Sprite):
         self.original_image = img.convert()
         self.image = self.original_image
         self.rect = self.image.get_rect()
+        # collision rectangle is 3 pixels from top (gun + 1) and 1 pixel from bottom
+        self._collision_rect = pygame.Rect(0, 0, self.rect.width, self.rect.height - 4)
 
     @property
     def position(self) -> dict[str, int]:
@@ -22,7 +26,10 @@ class SpaceCraftSprite(pygame.sprite.Sprite):
     @position.setter
     def position(self, value):
         self._position = value
-        self._set_top_left()
+        self.rect.centerx = self._position['x']
+        self.rect.centery = self._position['y']
+        self._collision_rect.centerx = self._position['x']
+        self._collision_rect.centery = self._position['y'] + SpaceCraftSprite.CLIP_VERTICAL_OFFSET
 
     @property
     def rotation(self) -> float:
@@ -33,11 +40,17 @@ class SpaceCraftSprite(pygame.sprite.Sprite):
         self._rotation = value
         self.image = pygame.transform.rotate(self.original_image, -self._rotation)
         self.rect = self.image.get_rect()
-        self._set_top_left()
+        self.rect.centerx = self._position['x']
+        self.rect.centery = self._position['y']
 
-    def _set_top_left(self):
-        self.rect.left = self._position['x'] - (self.rect.width / 2)
-        self.rect.top = self._position['y'] - (self.rect.height / 2)
+    @property
+    def collision_rect(self) -> pygame.Rect:
+        return self._collision_rect
+
+    def update(self, delta_time: float):
+        super().update()
+        self._collision_rect.centerx = self._position['x']
+        self._collision_rect.centery = self._position['y']
 
 
 class SpaceCraft:
@@ -70,6 +83,15 @@ class SpaceCraft:
         self._update_group = update_group
         self._main_sprite.add(draw_group)
         self._display_surface = pygame.display.get_surface()
+
+    @property
+    def collision_rects(self) -> list[pygame.Rect]:
+        if self._wrapped:
+            return [
+                self._main_sprite.collision_rect.clip(self._display_surface.get_rect()),
+                self._wrapped_sprite.collision_rect.clip(self._display_surface.get_rect())
+            ]
+        return [self._main_sprite.collision_rect]
 
     @property
     def bullets(self):
@@ -164,6 +186,7 @@ class SpaceCraft:
         dx = self._velocity['horizontal'] * (delta_time / 1000)
         # vertical screen axis is +ve downwards => -ve displacement
         dy = -self._velocity['vertical'] * (delta_time / 1000)
+        # drawing issues if not copied
         new_position = self._main_sprite.position.copy()
         new_position['x'] += dx
         new_position['y'] += dy
@@ -181,6 +204,7 @@ class SpaceCraft:
             self._wrapped = True
             self._wrapped_sprite.rotation = self._rotation
 
+            # drawing issues if not copied
             wrapped_sprite_position = self._main_sprite.position.copy()
 
             if self._main_sprite.rect.left < 0:

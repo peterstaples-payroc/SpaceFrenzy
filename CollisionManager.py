@@ -11,6 +11,11 @@ class CollisionManager:
         self._space_craft = space_craft
         self._asteroid_generator = asteroid_generator
         self._display_rect = pygame.display.get_surface().get_rect()
+        self._game_over = False
+
+    @property
+    def game_over(self):
+        return self._game_over
 
     def update(self):
         for bullet in self._space_craft.bullets.copy():
@@ -18,23 +23,39 @@ class CollisionManager:
             if not self._display_rect.colliderect(bullet.rect):
                 self._space_craft.bullets.remove(bullet)
                 bullet.kill()
-            # bullet-spacecraft collisions
+        for bullet in self._space_craft.bullets.copy():
             # asteroid-bullet collisions
+            collision = False
             for asteroid in self._asteroid_generator.asteroids.copy():
-                self._check_asteroid_bullet_collision(asteroid, bullet)
+                if collision:
+                    break
+                if self._check_asteroid_rect_collision(asteroid, bullet.rect):
+                    self._space_craft.bullets.remove(bullet)
+                    bullet.kill()
+                    self._asteroid_generator.fragment(asteroid)
+                    collision = True
+        for bullet in self._space_craft.bullets.copy():
+            # bullet-spacecraft collisions
+            for r in self._space_craft.collision_rects:
+                if r.colliderect(bullet.rect):
+                    self._game_over = True
 
         # asteroid-spacecraft collisions
+        for asteroid in self._asteroid_generator.asteroids.copy():
+            for rect in self._space_craft.collision_rects:
+                if self._check_asteroid_rect_collision(asteroid, rect):
+                    self._game_over = True
 
-    def _check_asteroid_bullet_collision(self, asteroid: Asteroid, bullet: SpaceCraftBullet):
+    def _check_asteroid_rect_collision(self, asteroid: Asteroid, rect: pygame.Rect) -> bool:
         if not asteroid.active:
-            return
+            return False
         # check if center point of circle is within the radius distance of the closest point on the rectangle
-        closest_x = pygame.math.clamp(asteroid.rect.centerx, bullet.rect.left, bullet.rect.right)
-        closest_y = pygame.math.clamp(asteroid.rect.centery, bullet.rect.top, bullet.rect.bottom)
+        closest_x = pygame.math.clamp(asteroid.rect.centerx, rect.left, rect.right)
+        closest_y = pygame.math.clamp(asteroid.rect.centery, rect.top, rect.bottom)
         distance_x = asteroid.rect.centerx - closest_x
         distance_y = asteroid.rect.centery - closest_y
         if (distance_x ** 2) + (distance_y ** 2) <= (asteroid.radius ** 2):
             self._asteroid_generator.asteroids.remove(asteroid)
             asteroid.kill()
-            self._space_craft.bullets.remove(bullet)
-            bullet.kill()
+            return True
+        return False

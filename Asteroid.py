@@ -1,13 +1,23 @@
+import math  # todo: is it better to import only the objects needed, rather than the whole package?
+
 import pygame
 from Projectile import Projectile
 
 
 class Asteroid(Projectile):
+    MINIMUM_DIAMETER = 10  # pixels
+    MAXIMUM_DIAMETER = 75  # pixels
+    MINIMUM_SPEED = 50  # pixels/s
+    MAXIMUM_SPEED = 250  # pixels/s
+    MINIMUM_AREA = ((MINIMUM_DIAMETER / 2) ** 2) * math.pi
+
     def __init__(self, position: dict[str, int], velocity: dict[str, float], direction: float, diameter: int,
                  containing_rect: pygame.Rect):
         super().__init__(position, velocity, direction)
         self._active = False  # flags that the asteroid is not fully on screen yet
         self._radius = diameter / 2
+        self._area = math.pi * (self._radius ** 2)
+        self._energy = (self.area * ((self._velocity['horizontal'] ** 2) + (self._velocity['vertical'] ** 2))) / 2
         self._containing_rect = containing_rect
         self._top_edge = pygame.Rect(self._containing_rect.left, self._containing_rect.top,
                                      self._containing_rect.width, 1)
@@ -32,6 +42,14 @@ class Asteroid(Projectile):
     @property
     def radius(self) -> float:
         return self._radius
+
+    @property
+    def area(self) -> float:
+        return self._area
+
+    @property
+    def energy(self) -> float:
+        return self._energy
 
     def update(self, delta_time: int):
         super().update(delta_time)

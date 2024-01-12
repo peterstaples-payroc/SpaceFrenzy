@@ -41,6 +41,9 @@ class SpaceFrenzyEngine:
             collision_manager.update()
             dirty_rects = draw_group.draw(display_surface)
             pygame.display.update(dirty_rects)
-            running = len(pygame.event.get(eventtype=pygame.QUIT, pump=True)) == 0
+            running = (len(pygame.event.get(eventtype=pygame.QUIT, pump=True)) == 0
+                       and not collision_manager.game_over)
 
+        if collision_manager.game_over:
+            print('GAME OVER!')
         pygame.quit()

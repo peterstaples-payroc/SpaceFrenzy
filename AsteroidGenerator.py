@@ -5,10 +5,6 @@ from Asteroid import Asteroid
 
 
 class AsteroidGenerator:
-    MINIMUM_DIAMETER = 5  # pixels
-    MAXIMUM_DIAMETER = 75  # pixels
-    MINIMUM_SPEED = 50  # pixels/s
-    MAXIMUM_SPEED = 250  # pixels/s
     MINIMUM_LEVEL = 1
     MAXIMUM_LEVEL = 99
     MINIMUM_GENERATION_PERIOD = 5000  # seconds
@@ -30,6 +26,29 @@ class AsteroidGenerator:
     def asteroids(self) -> list[Asteroid]:
         return self._asteroids
 
+    def fragment(self, asteroid):
+        remaining_area = asteroid.area
+        remaining_energy = asteroid.energy
+        while remaining_area > (Asteroid.MINIMUM_AREA * 1.25):  # factor in reduction by 20%
+            # generate new asteroids up to 80% of the original size
+            new_area = random.randint(int(Asteroid.MINIMUM_AREA), int(asteroid.area * 0.8))
+            remaining_area = remaining_area - new_area
+            new_diameter = math.sqrt(new_area / math.pi) * 2  # todo: use squared values for speed?
+            new_energy = remaining_energy * 0.8
+            remaining_energy = remaining_energy - new_energy
+            new_speed = math.sqrt(2 * new_energy / new_area)
+            new_rotation = random.randint(-180, 180)
+            new_velocity = {
+                'horizontal': new_speed * math.sin(math.radians(new_rotation)),
+                'vertical': new_speed * math.cos(math.radians(new_rotation))
+            }
+            new_position = asteroid.position.copy()
+
+            new_asteroid = Asteroid(new_position, new_velocity, new_rotation, int(new_diameter),
+                                    self._display_surface.get_rect())
+            self._asteroids.append(new_asteroid)
+            new_asteroid.add([self._draw_group, self._update_group])
+
     def update(self):
         # generation rules
         # -asteroid generation period = Max period - (((max period - min period)/max level) * (level - 1))
@@ -47,7 +66,8 @@ class AsteroidGenerator:
             self._generate()
             self._prev_generation_time = pygame.time.get_ticks()
             self._asteroid_level_count = 1
-        elif elapsed_time > self._level_generation_period or len(self._asteroids) == 0:
+        elif ((elapsed_time > self._level_generation_period or len(self._asteroids) == 0)
+              and self._asteroid_level_count < self._level):
             self._generate()
             self._prev_generation_time = pygame.time.get_ticks()
             self._asteroid_level_count += 1
@@ -59,7 +79,7 @@ class AsteroidGenerator:
         # -select random position on-screen, get calculate velocity between that point and asteroid center point
         # -create asteroid
 
-        diameter = random.randint(AsteroidGenerator.MINIMUM_DIAMETER, AsteroidGenerator.MAXIMUM_DIAMETER)
+        diameter = random.randint(Asteroid.MINIMUM_DIAMETER, Asteroid.MAXIMUM_DIAMETER)
         # top=0, right=1, bottom=2, left=3
         # could use an outer rectangle to get values, as for inner_rect
         location = random.randint(0, 3)
@@ -100,7 +120,7 @@ class AsteroidGenerator:
             'y': position['y'] - target_point['y']
         }
         magnitude = math.sqrt(targeting_vector['x'] ** 2 + targeting_vector['y'] ** 2)
-        speed = random.randint(AsteroidGenerator.MINIMUM_SPEED, AsteroidGenerator.MAXIMUM_SPEED)
+        speed = random.randint(Asteroid.MINIMUM_SPEED, Asteroid.MAXIMUM_SPEED)
         if targeting_vector['x'] > 0 and targeting_vector['y'] > 0:
             targeting_rotation_rad = math.asin(targeting_vector['x'] / magnitude)
         elif targeting_vector['x'] > 0 and targeting_vector['y'] < 0:
