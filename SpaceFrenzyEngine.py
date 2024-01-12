@@ -44,7 +44,7 @@ class SpaceFrenzyEngine:
         pygame.quit()
 
     def _restart_game(self) -> bool:
-        # todo: make sure all object references are cleared i.e. empty lists inside objects
+        # todo: make sure all object references are cleared i.e. empty lists inside objects.  is this required?
         self._update_group.empty()
         self._draw_group.empty()
         space_craft = SpaceCraft(self.main_dir, self._display_surface, self._space_rect,
