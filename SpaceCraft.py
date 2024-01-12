@@ -17,6 +17,7 @@ class SpaceCraftSprite(pygame.sprite.Sprite):
         self.image = self.original_image
         self.rect = self.image.get_rect()
         # collision rectangle is 3 pixels from top (gun + 1) and 1 pixel from bottom
+        # todo: rotate collision rectangle or replace with circle (preferred)
         self._collision_rect = pygame.Rect(0, 0, self.rect.width, self.rect.height - 4)
 
     @property

@@ -29,6 +29,8 @@ class CollisionManager:
                 if collision:
                     break
                 if self._check_asteroid_rect_collision(asteroid, bullet.rect):
+                    self._asteroid_generator.remove(asteroid)
+                    asteroid.kill()
                     self._space_craft.bullets.remove(bullet)
                     bullet.kill()
                     self._asteroid_generator.fragment(asteroid)
@@ -54,7 +56,5 @@ class CollisionManager:
         distance_x = asteroid.rect.centerx - closest_x
         distance_y = asteroid.rect.centery - closest_y
         if (distance_x ** 2) + (distance_y ** 2) <= (asteroid.radius ** 2):
-            self._asteroid_generator.remove(asteroid)
-            asteroid.kill()
             return True
         return False

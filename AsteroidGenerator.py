@@ -9,6 +9,11 @@ class AsteroidGenerator:
     MAXIMUM_LEVEL = 99
     MINIMUM_GENERATION_PERIOD = 5000  # seconds
     MAXIMUM_GENERATION_PERIOD = 60000  # seconds
+    MINIMUM_DIAMETER = 10  # pixels
+    MAXIMUM_DIAMETER = 75  # pixels
+    MINIMUM_SPEED = 150  # pixels/s
+    MAXIMUM_SPEED = 250  # pixels/s
+    MINIMUM_AREA = ((MINIMUM_DIAMETER / 2) ** 2) * math.pi
 
     def __init__(self, display_surface, display_rect, draw_group, update_group):
         self._draw_group = draw_group
@@ -59,12 +64,12 @@ class AsteroidGenerator:
     def fragment(self, asteroid):
         remaining_area = asteroid.area
         remaining_energy = asteroid.energy
-        while remaining_area > (Asteroid.MINIMUM_AREA * 1.25):  # factor in reduction by 20%
+        while remaining_area > (AsteroidGenerator.MINIMUM_AREA * 1.25):  # factor in reduction by 20%
             # generate new asteroids up to 80% of the original size
-            new_area = random.randint(int(Asteroid.MINIMUM_AREA), int(asteroid.area * 0.8))
+            new_area = random.randint(int(AsteroidGenerator.MINIMUM_AREA), int(asteroid.area * 0.8))
             remaining_area = remaining_area - new_area
             new_diameter = math.sqrt(new_area / math.pi) * 2  # todo: use squared values for speed?
-            new_energy = remaining_energy * 0.8
+            new_energy = random.randint(0, int(remaining_energy * 0.8))
             remaining_energy = remaining_energy - new_energy
             new_speed = math.sqrt(2 * new_energy / new_area)
             new_rotation = random.randint(-180, 180)
@@ -111,7 +116,7 @@ class AsteroidGenerator:
         # -select random position on-screen, get calculate velocity between that point and asteroid center point
         # -create asteroid
 
-        diameter = random.randint(Asteroid.MINIMUM_DIAMETER, Asteroid.MAXIMUM_DIAMETER)
+        diameter = random.randint(AsteroidGenerator.MINIMUM_DIAMETER, AsteroidGenerator.MAXIMUM_DIAMETER)
         # top=0, right=1, bottom=2, left=3
         # could use an outer rectangle to get values, as for inner_rect
         location = random.randint(0, 3)
@@ -152,7 +157,7 @@ class AsteroidGenerator:
             'y': position['y'] - target_point['y']
         }
         magnitude = math.sqrt(targeting_vector['x'] ** 2 + targeting_vector['y'] ** 2)
-        speed = random.randint(Asteroid.MINIMUM_SPEED, Asteroid.MAXIMUM_SPEED)
+        speed = random.randint(AsteroidGenerator.MINIMUM_SPEED, AsteroidGenerator.MAXIMUM_SPEED)
         if targeting_vector['x'] > 0 and targeting_vector['y'] > 0:
             targeting_rotation_rad = math.asin(targeting_vector['x'] / magnitude)
         elif targeting_vector['x'] > 0 and targeting_vector['y'] < 0:

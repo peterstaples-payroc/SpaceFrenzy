@@ -5,12 +5,6 @@ from Projectile import Projectile
 
 
 class Asteroid(Projectile):
-    MINIMUM_DIAMETER = 10  # pixels
-    MAXIMUM_DIAMETER = 75  # pixels
-    MINIMUM_SPEED = 50  # pixels/s
-    MAXIMUM_SPEED = 250  # pixels/s
-    MINIMUM_AREA = ((MINIMUM_DIAMETER / 2) ** 2) * math.pi
-
     def __init__(self, position: dict[str, int], velocity: dict[str, float], direction: float, diameter: int,
                  containing_rect: pygame.Rect, primary=False):
         super().__init__(position, velocity, direction)
