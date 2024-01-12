@@ -10,21 +10,51 @@ class AsteroidGenerator:
     MINIMUM_GENERATION_PERIOD = 5000  # seconds
     MAXIMUM_GENERATION_PERIOD = 60000  # seconds
 
-    def __init__(self, draw_group, update_group):
+    def __init__(self, display_surface, display_rect, draw_group, update_group):
         self._draw_group = draw_group
         self._update_group = update_group
-        self._display_surface = pygame.display.get_surface()
+        self._display_surface = display_surface
+        self._display_rect = display_rect
 
         self._level = 0  # the level of the game
         self._level_generation_period = 0  # the time between asteroid generations for the current level
         self._asteroid_level_count = self._level  # number of asteroids generated so far in this level.  Set to level to trigger new level
+        self._asteroids_destroyed_level_count = 0
+        self._asteroids_destroyed_total_count = 0
         self._asteroids = []  # the asteroids remaining in this level
         self._prev_generation_time = 0  # the previous time an asteroid was generated
+        self._time_to_next_generation = 0
         random.seed()
 
     @property
+    def level(self):
+        return self._level
+
+    @property
+    def asteroid_level_count(self):
+        return self._asteroid_level_count
+
+    @property
+    def asteroids_destroyed_level_count(self):
+        return self._asteroids_destroyed_level_count
+
+    @property
+    def asteroids_destroyed_total_count(self):
+        return self._asteroids_destroyed_total_count
+
+    @property
+    def time_to_next_generation(self):
+        return self._time_to_next_generation
+
+    @property
     def asteroids(self) -> list[Asteroid]:
-        return self._asteroids
+        return self._asteroids.copy()
+
+    def remove(self, asteroid: Asteroid) -> None:
+        self._asteroids.remove(asteroid)
+        if asteroid.primary:
+            self._asteroids_destroyed_level_count += 1
+            self._asteroids_destroyed_total_count += 1
 
     def fragment(self, asteroid):
         remaining_area = asteroid.area
@@ -45,7 +75,7 @@ class AsteroidGenerator:
             new_position = asteroid.position.copy()
 
             new_asteroid = Asteroid(new_position, new_velocity, new_rotation, int(new_diameter),
-                                    self._display_surface.get_rect())
+                                    self._display_rect)
             self._asteroids.append(new_asteroid)
             new_asteroid.add([self._draw_group, self._update_group])
 
@@ -58,6 +88,7 @@ class AsteroidGenerator:
 
         # level complete
         elapsed_time = pygame.time.get_ticks() - self._prev_generation_time
+        self._time_to_next_generation = self._level_generation_period - elapsed_time
         if self._asteroid_level_count == self._level and len(self._asteroids) == 0:
             self._level += 1
             print('Level ', self._level)
@@ -66,6 +97,7 @@ class AsteroidGenerator:
             self._generate()
             self._prev_generation_time = pygame.time.get_ticks()
             self._asteroid_level_count = 1
+            self._asteroids_destroyed_level_count = 0
         elif ((elapsed_time > self._level_generation_period or len(self._asteroids) == 0)
               and self._asteroid_level_count < self._level):
             self._generate()
@@ -85,27 +117,27 @@ class AsteroidGenerator:
         location = random.randint(0, 3)
         if location == 0:
             position = {
-                'x': random.randint(0, self._display_surface.get_width() + (diameter * 2)) - diameter,
+                'x': random.randint(0, self._display_rect.width + (diameter * 2)) - diameter,
                 'y': -(diameter / 2)
             }
         elif location == 1:
             position = {
-                'x': self._display_surface.get_width() + (diameter / 2),
-                'y': random.randint(0, self._display_surface.get_height() + (diameter * 2)) - diameter
+                'x': self._display_rect.width + (diameter / 2),
+                'y': random.randint(0, self._display_rect.height + (diameter * 2)) - diameter
             }
         elif location == 2:
             position = {
-                'x': random.randint(0, self._display_surface.get_width() + (diameter * 2)) - diameter,
-                'y': self._display_surface.get_height() + (diameter / 2)
+                'x': random.randint(0, self._display_rect.width + (diameter * 2)) - diameter,
+                'y': self._display_rect.height + (diameter / 2)
             }
         else:  # location == 3
             position = {
                 'x': -(diameter / 2),
-                'y': random.randint(0, self._display_surface.get_height() + (diameter * 2)) - diameter
+                'y': random.randint(0, self._display_rect.height + (diameter * 2)) - diameter
             }
         # use inner rect such that the asteroid is guaranteed to fully appear
-        inner_rect = pygame.Rect(diameter, diameter, self._display_surface.get_width() - (diameter * 2),
-                                 self._display_surface.get_height() - (diameter * 2))
+        inner_rect = pygame.Rect(diameter, diameter, self._display_rect.width - (diameter * 2),
+                                 self._display_rect.height - (diameter * 2))
         target_point = {
             'x': random.randint(inner_rect.left, inner_rect.right),
             'y': random.randint(inner_rect.top, inner_rect.bottom)
@@ -135,6 +167,6 @@ class AsteroidGenerator:
         }
 
         asteroid = Asteroid(position, velocity, math.degrees(targeting_rotation_rad), diameter,
-                            self._display_surface.get_rect())
+                            self._display_rect, True)
         self._asteroids.append(asteroid)
         asteroid.add([self._draw_group, self._update_group])

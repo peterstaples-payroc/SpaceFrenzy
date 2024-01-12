@@ -3,14 +3,13 @@ import pygame
 from Asteroid import Asteroid
 from AsteroidGenerator import AsteroidGenerator
 from SpaceCraft import SpaceCraft
-from SpaceCraftBullet import SpaceCraftBullet
 
 
 class CollisionManager:
-    def __init__(self, space_craft: SpaceCraft, asteroid_generator: AsteroidGenerator):
+    def __init__(self, space_craft: SpaceCraft, asteroid_generator: AsteroidGenerator, display_rect: pygame.Rect):
         self._space_craft = space_craft
         self._asteroid_generator = asteroid_generator
-        self._display_rect = pygame.display.get_surface().get_rect()
+        self._display_rect = display_rect
         self._game_over = False
 
     @property
@@ -26,7 +25,7 @@ class CollisionManager:
         for bullet in self._space_craft.bullets.copy():
             # asteroid-bullet collisions
             collision = False
-            for asteroid in self._asteroid_generator.asteroids.copy():
+            for asteroid in self._asteroid_generator.asteroids:
                 if collision:
                     break
                 if self._check_asteroid_rect_collision(asteroid, bullet.rect):
@@ -41,7 +40,7 @@ class CollisionManager:
                     self._game_over = True
 
         # asteroid-spacecraft collisions
-        for asteroid in self._asteroid_generator.asteroids.copy():
+        for asteroid in self._asteroid_generator.asteroids:
             for rect in self._space_craft.collision_rects:
                 if self._check_asteroid_rect_collision(asteroid, rect):
                     self._game_over = True
@@ -55,7 +54,7 @@ class CollisionManager:
         distance_x = asteroid.rect.centerx - closest_x
         distance_y = asteroid.rect.centery - closest_y
         if (distance_x ** 2) + (distance_y ** 2) <= (asteroid.radius ** 2):
-            self._asteroid_generator.asteroids.remove(asteroid)
+            self._asteroid_generator.remove(asteroid)
             asteroid.kill()
             return True
         return False

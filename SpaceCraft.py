@@ -59,7 +59,7 @@ class SpaceCraft:
     AUTOMATIC_FIRE_PERIOD = 0.500  # ms => 2 bullets/s
     AUTOMATIC_FIRE_THRESHOLD = 1000  # ms = 1s
 
-    def __init__(self, main_dir: str, x_pos_center: float, y_pos_center: float,
+    def __init__(self, main_dir: str, display_surface: pygame.Surface, display_rect: pygame.Rect,
                  draw_group: pygame.sprite.Group, update_group: pygame.sprite.Group):
         self._keys_pressed = {
             'up': False,
@@ -76,20 +76,21 @@ class SpaceCraft:
         self._automatic_fire_prev_fire_time = 0
         self._bullets = []
 
+        self._display_surface = display_surface
+        self._display_rect = display_rect
         self._main_sprite = SpaceCraftSprite(main_dir, 'spacecraft.png')
         self._wrapped_sprite = SpaceCraftSprite(main_dir, 'spacecraft.png')
-        self._main_sprite.position = {'x': x_pos_center, 'y': y_pos_center}
+        self._main_sprite.position = {'x': self._display_rect.width / 2, 'y': self._display_rect.height / 2}
         self._draw_group = draw_group
         self._update_group = update_group
         self._main_sprite.add(draw_group)
-        self._display_surface = pygame.display.get_surface()
 
     @property
     def collision_rects(self) -> list[pygame.Rect]:
         if self._wrapped:
             return [
-                self._main_sprite.collision_rect.clip(self._display_surface.get_rect()),
-                self._wrapped_sprite.collision_rect.clip(self._display_surface.get_rect())
+                self._main_sprite.collision_rect.clip(self._display_rect),
+                self._wrapped_sprite.collision_rect.clip(self._display_rect)
             ]
         return [self._main_sprite.collision_rect]
 
@@ -194,8 +195,8 @@ class SpaceCraft:
 
     def _check_wrapped(self):
         self._wrapped = False
-        display_width = self._display_surface.get_width()
-        display_height = self._display_surface.get_height()
+        display_width = self._display_rect.width
+        display_height = self._display_rect.height
 
         if (self._main_sprite.rect.left < 0
                 or self._main_sprite.rect.right > display_width
@@ -242,14 +243,13 @@ class SpaceCraft:
         #     self._automatic_fire_prev_fire_time = pygame.time.get_ticks()
 
     def _create_bullet(self):
-        display_rect = self._display_surface.get_rect()
         # get bullet position.
         # determine which sprite has its gun point on screen.
         # get gun point from main sprite. check if it collides with the screen rectangle.
         # if it doesn't then the wrapped sprite must have its gun point in the screen
         firing_sprite = self._main_sprite
         gun_point = self._get_gun_point(self._main_sprite)
-        if not display_rect.collidepoint(gun_point['x'], gun_point['y']):
+        if not self._display_rect.collidepoint(gun_point['x'], gun_point['y']):
             firing_sprite = self._wrapped_sprite
         # recalculate the starting center point of the bullet as an extension of the sprite
         bullet_center = self._get_gun_point(firing_sprite, SpaceCraftBullet.DIAMETER)
