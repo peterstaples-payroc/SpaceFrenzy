@@ -5,7 +5,7 @@ from Projectile import Projectile
 
 
 class Asteroid(Projectile):
-    def __init__(self, position: dict[str, int], velocity: dict[str, float], direction: float, diameter: int,
+    def __init__(self, position: dict[str, float], velocity: dict[str, float], direction: float, diameter: int,
                  containing_rect: pygame.Rect):
         super().__init__(position, velocity, direction)
         self._active = False  # flags that the asteroid is not fully on screen yet
@@ -30,7 +30,7 @@ class Asteroid(Projectile):
         self.rect.centery = self._position['y']
 
     @property
-    def active(self):
+    def active(self) -> bool:
         return self._active
 
     @property
@@ -59,18 +59,18 @@ class Asteroid(Projectile):
 
 
 class AsteroidPrimary(Asteroid):
-    def __init__(self, position: dict[str, int], velocity: dict[str, float], direction: float, diameter: int,
+    def __init__(self, position: dict[str, float], velocity: dict[str, float], direction: float, diameter: int,
                  containing_rect: pygame.Rect):
         super().__init__(position, velocity, direction, diameter, containing_rect)
         self._fragments = []
 
     @property
-    def fragments(self):
+    def fragments(self) -> list[Asteroid]:
         return self._fragments
 
 
 class AsteroidFragment(Asteroid):
-    def __init__(self, position: dict[str, int], velocity: dict[str, float], direction: float, diameter: int,
+    def __init__(self, position: dict[str, float], velocity: dict[str, float], direction: float, diameter: int,
                  containing_rect: pygame.Rect, primary_asteroid: AsteroidPrimary):
         super().__init__(position, velocity, direction, diameter, containing_rect)
         self.primary_asteroid = primary_asteroid

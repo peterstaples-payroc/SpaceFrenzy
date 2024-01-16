@@ -12,7 +12,7 @@ class Hud(pygame.sprite.Sprite):
         self.image = pygame.Surface((display_rect.width, display_rect.height))
         self.rect = display_rect
         self.image.fill(Hud.BACKGROUND_COLOUR)
-        draw_group.add(self)
+        self.add(draw_group)
 
         self._font = pygame.font.Font(None, 24)
         text = f'Level: {data.level}'

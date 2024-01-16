@@ -7,7 +7,7 @@ from SpaceCraftBullet import SpaceCraftBullet
 class SpaceCraftSprite(pygame.sprite.Sprite):
     CLIP_VERTICAL_OFFSET = 3
 
-    def __init__(self, main_dir, file_name):
+    def __init__(self, main_dir: str, file_name: str):
         super().__init__()
         self._position = {'x': 0, 'y': 0}
         self._rotation = 0
@@ -21,11 +21,11 @@ class SpaceCraftSprite(pygame.sprite.Sprite):
         self._collision_rect = pygame.Rect(0, 0, self.rect.width, self.rect.height - 4)
 
     @property
-    def position(self) -> dict[str, int]:
+    def position(self) -> dict[str, float]:
         return self._position
 
     @position.setter
-    def position(self, value):
+    def position(self, value: dict[str, float]):
         self._position = value
         self.rect.centerx = self._position['x']
         self.rect.centery = self._position['y']
@@ -37,7 +37,7 @@ class SpaceCraftSprite(pygame.sprite.Sprite):
         return self._rotation
 
     @rotation.setter
-    def rotation(self, value):
+    def rotation(self, value: float):
         self._rotation = value
         self.image = pygame.transform.rotate(self.original_image, -self._rotation)
         self.rect = self.image.get_rect()
@@ -47,11 +47,6 @@ class SpaceCraftSprite(pygame.sprite.Sprite):
     @property
     def collision_rect(self) -> pygame.Rect:
         return self._collision_rect
-
-    def update(self, delta_time: float):
-        super().update()
-        self._collision_rect.centerx = self._position['x']
-        self._collision_rect.centery = self._position['y']
 
 
 class SpaceCraft:
@@ -96,13 +91,13 @@ class SpaceCraft:
         return [self._main_sprite.collision_rect]
 
     @property
-    def bullets(self):
+    def bullets(self) -> list[SpaceCraftBullet]:
         return self._bullets
 
     # todo: abstract out keystrokes to an InputController (KeyHandler) and a CommandController (SpaceCraftCommand)
     # KeyHandler will direct keystrokes to the appropriate CommandController
     # SpaceCraftCommand will take those keystrokes and call accelerate/rotate/etc on the SpaceCraft
-    def update(self, delta_time, key_events):
+    def update(self, delta_time: int, key_events: list[pygame.event.Event]):
         self._process_keys(key_events)
         self._update_rotation(delta_time)
         self._update_velocity(delta_time)
@@ -110,7 +105,7 @@ class SpaceCraft:
         self._check_wrapped()
         self._fire_gun()
 
-    def _process_keys(self, key_events):
+    def _process_keys(self, key_events: list[pygame.event.Event]):
         key_inputs = pygame.key.get_pressed()
         if not self._keys_pressed['up'] and not self._keys_pressed['down']:
             self._keys_pressed['up'] = key_inputs[pygame.K_UP] and not key_inputs[pygame.K_DOWN]
@@ -154,7 +149,7 @@ class SpaceCraft:
                 and (pygame.time.get_ticks() - self._automatic_fire_start_time) > SpaceCraft.AUTOMATIC_FIRE_THRESHOLD):
             self._automatic_fire_mode = True
 
-    def _update_rotation(self, delta_time):
+    def _update_rotation(self, delta_time: int):
         rotated = False
         # assume cannot rotate more than 180d in one cycle
         if self._keys_pressed['left']:
@@ -172,26 +167,26 @@ class SpaceCraft:
         if rotated:
             self._main_sprite.rotation = self._rotation
 
-    def _update_velocity(self, delta_time):
+    def _update_velocity(self, delta_time: int):
         if self._keys_pressed['up']:
             self._velocity['vertical'] += SpaceCraft.ACCELERATION * delta_time * math.cos(math.radians(self._rotation))
-            self._velocity['horizontal'] += SpaceCraft.ACCELERATION * delta_time * math.sin(math.radians(self._rotation))
+            self._velocity['horizontal'] += SpaceCraft.ACCELERATION * delta_time * math.sin(
+                math.radians(self._rotation))
 
         if self._keys_pressed['down']:
             self._velocity['vertical'] -= SpaceCraft.ACCELERATION * delta_time * math.cos(math.radians(self._rotation))
-            self._velocity['horizontal'] -= SpaceCraft.ACCELERATION * delta_time * math.sin(math.radians(self._rotation))
+            self._velocity['horizontal'] -= SpaceCraft.ACCELERATION * delta_time * math.sin(
+                math.radians(self._rotation))
         # todo: if speed exceeds (4 * screen height) pixels/s then show warning that approaching 80% speed of light,
         # relativistic effects weakening structural integrity, failure imminent.
         # When speed = (5 * screen height) pixels/s then spacecraft implodes
 
-    def _update_position(self, delta_time):
-        dx = self._velocity['horizontal'] * (delta_time / 1000)
-        # vertical screen axis is +ve downwards => -ve displacement
-        dy = -self._velocity['vertical'] * (delta_time / 1000)
+    def _update_position(self, delta_time: int):
         # drawing issues if not copied
         new_position = self._main_sprite.position.copy()
-        new_position['x'] += dx
-        new_position['y'] += dy
+        new_position['x'] += self._velocity['horizontal'] * (delta_time / 1000)
+        # vertical screen axis is +ve downwards => -ve displacement
+        new_position['y'] += -self._velocity['vertical'] * (delta_time / 1000)
         self._main_sprite.position = new_position
 
     def _check_wrapped(self):
@@ -257,9 +252,9 @@ class SpaceCraft:
 
         bullet = SpaceCraftBullet(bullet_center, self._velocity.copy(), self._rotation)
         self._bullets.append(bullet)
-        bullet.add([self._draw_group, self._update_group])
+        bullet.add(self._draw_group, self._update_group)
 
-    def _get_gun_point(self, sprite, offset=0) -> dict[str, float]:
+    def _get_gun_point(self, sprite: SpaceCraftSprite, offset: int = 0) -> dict[str, float]:
         # the gun point is the top center of the sprite when in its original position.
         # calculate its rotated position
         gun_center_displacement = (sprite.original_image.get_rect().height + offset) / 2

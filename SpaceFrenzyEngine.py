@@ -12,7 +12,7 @@ class SpaceFrenzyEngine:
     SPACE_HEIGHT = 600
     HUD_HEIGHT = 35
 
-    def __init__(self, main_dir):
+    def __init__(self, main_dir: str):
         self.main_dir = main_dir
         self._display_surface = None
         self._background = None
@@ -84,7 +84,7 @@ class SpaceFrenzyEngine:
 
         return not quit_game
 
-    def _wait_on_keyup(self, key, message) -> bool:
+    def _wait_on_keyup(self, key: int, message: str) -> bool:
         hud_data = HudData(
             self._asteroid_generator.level,
             self._asteroid_generator.asteroid_level_count,

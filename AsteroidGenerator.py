@@ -15,7 +15,8 @@ class AsteroidGenerator:
     MAXIMUM_SPEED = 250  # pixels/s
     MINIMUM_AREA = ((MINIMUM_DIAMETER / 2) ** 2) * math.pi
 
-    def __init__(self, display_surface, display_rect, draw_group, update_group):
+    def __init__(self, display_surface: pygame.Surface, display_rect: pygame.Rect,
+                 draw_group: pygame.sprite.Group, update_group: pygame.sprite.Group):
         self._draw_group = draw_group
         self._update_group = update_group
         self._display_surface = display_surface
@@ -23,39 +24,40 @@ class AsteroidGenerator:
 
         self._level = 0  # the level of the game
         self._level_generation_period = 0  # the time between asteroid generations for the current level
-        self._asteroid_level_count = self._level  # number of asteroids generated so far in this level.  Set to level to trigger new level
-        self._asteroids_destroyed_level_count = 0
-        self._asteroids_destroyed_total_count = 0
+        # number of asteroids generated so far in this level.  Set to level 0 to trigger new level
+        self._asteroid_level_count = self._level
+        self._asteroids_destroyed_level_count = 0  # asteroids destroyed in the current level
+        self._asteroids_destroyed_total_count = 0  # asteroids destroyed in total
         self._asteroids = []  # the primary asteroids & fragments active in this level
-        self._prev_generation_time = 0  # the previous time an asteroid was generated
-        self._time_to_next_generation = 0
+        self._prev_generation_time = 0  # the previous time a primary asteroid was generated
+        self._time_to_next_generation = 0  # time until the next primary asteroid is generated
         random.seed()
 
     @property
-    def level(self):
+    def level(self) -> int:
         return self._level
 
     @property
-    def asteroid_level_count(self):
+    def asteroid_level_count(self) -> int:
         return self._asteroid_level_count
 
     @property
-    def asteroids_destroyed_level_count(self):
+    def asteroids_destroyed_level_count(self) -> int:
         return self._asteroids_destroyed_level_count
 
     @property
-    def asteroids_destroyed_total_count(self):
+    def asteroids_destroyed_total_count(self) -> int:
         return self._asteroids_destroyed_total_count
 
     @property
-    def time_to_next_generation(self):
+    def time_to_next_generation(self) -> int:
         return self._time_to_next_generation
 
     @property
     def asteroids(self) -> list[Asteroid]:
         return self._asteroids.copy()
 
-    def remove(self, asteroid: Asteroid) -> None:
+    def remove(self, asteroid: Asteroid):
         self._asteroids.remove(asteroid)
         if isinstance(asteroid, AsteroidFragment):
             asteroid.primary_asteroid.fragments.remove(asteroid)
@@ -64,11 +66,11 @@ class AsteroidGenerator:
                 self._asteroids_destroyed_total_count += 1
             asteroid.primary_asteroid = None
 
-    def fragment(self, asteroid):
-        if isinstance(asteroid, AsteroidPrimary):
-            primary_asteroid = asteroid
-        else:
+    def fragment(self, asteroid: Asteroid):
+        if isinstance(asteroid, AsteroidFragment):
             primary_asteroid = asteroid.primary_asteroid
+        else:
+            primary_asteroid = asteroid
         remaining_area = asteroid.area
         remaining_energy = asteroid.energy
         while remaining_area > (AsteroidGenerator.MINIMUM_AREA * 1.25):  # factor in reduction by 20%
@@ -90,7 +92,7 @@ class AsteroidGenerator:
                                             self._display_rect, primary_asteroid)
             self._asteroids.append(new_asteroid)
             primary_asteroid.fragments.append(new_asteroid)
-            new_asteroid.add([self._draw_group, self._update_group])
+            new_asteroid.add(self._draw_group, self._update_group)
 
     def update(self):
         # generation rules
@@ -104,7 +106,6 @@ class AsteroidGenerator:
         self._time_to_next_generation = self._level_generation_period - elapsed_time
         if self._asteroid_level_count == self._level and len(self._asteroids) == 0:
             self._level += 1
-            print('Level ', self._level)
             period_reduction = (
                     (
                             (AsteroidGenerator.MAXIMUM_GENERATION_PERIOD - AsteroidGenerator.MINIMUM_GENERATION_PERIOD)
@@ -188,4 +189,4 @@ class AsteroidGenerator:
         asteroid = AsteroidPrimary(position, velocity, math.degrees(targeting_rotation_rad), diameter,
                                    self._display_rect)
         self._asteroids.append(asteroid)
-        asteroid.add([self._draw_group, self._update_group])
+        asteroid.add(self._draw_group, self._update_group)
