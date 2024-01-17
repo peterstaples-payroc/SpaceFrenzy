@@ -1,7 +1,7 @@
 import math
 import random
 import pygame.time
-from Asteroid import Asteroid, AsteroidFragment, AsteroidPrimary
+from .Asteroid import Asteroid, AsteroidFragment, AsteroidPrimary
 
 
 class AsteroidGenerator:

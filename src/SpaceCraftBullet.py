@@ -1,6 +1,6 @@
 import math
 import pygame
-from Projectile import Projectile
+from .Projectile import Projectile
 
 
 class SpaceCraftBullet(Projectile):

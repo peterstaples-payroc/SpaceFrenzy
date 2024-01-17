@@ -1,7 +1,7 @@
 import math
 import os
 import pygame
-from SpaceCraftBullet import SpaceCraftBullet
+from .SpaceCraftBullet import SpaceCraftBullet
 
 
 class SpaceCraftSprite(pygame.sprite.Sprite):

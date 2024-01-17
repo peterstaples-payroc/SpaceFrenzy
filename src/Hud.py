@@ -1,6 +1,6 @@
 import pygame
 
-from HudData import HudData
+from .HudData import HudData
 
 
 class Hud(pygame.sprite.Sprite):

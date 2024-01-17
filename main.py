@@ -1,5 +1,5 @@
 import os
-from SpaceFrenzyEngine import SpaceFrenzyEngine
+from src.SpaceFrenzyEngine import SpaceFrenzyEngine
 
 
 main_dir = os.path.split(os.path.abspath(__file__))[0]

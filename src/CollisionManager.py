@@ -1,8 +1,8 @@
 import pygame
 
-from Asteroid import Asteroid
-from AsteroidGenerator import AsteroidGenerator
-from SpaceCraft import SpaceCraft
+from .Asteroid import Asteroid
+from .AsteroidGenerator import AsteroidGenerator
+from .SpaceCraft import SpaceCraft
 
 
 def _check_asteroid_rect_collision(asteroid: Asteroid, rect: pygame.Rect) -> bool:

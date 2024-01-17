@@ -1,7 +1,7 @@
 import math  # todo: is it better to import only the objects needed, rather than the whole package?
 
 import pygame
-from Projectile import Projectile
+from .Projectile import Projectile
 
 
 class Asteroid(Projectile):

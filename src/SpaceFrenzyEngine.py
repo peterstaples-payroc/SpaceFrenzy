@@ -1,10 +1,10 @@
 import pygame
 
-from AsteroidGenerator import AsteroidGenerator
-from CollisionManager import CollisionManager
-from Hud import Hud
-from SpaceCraft import SpaceCraft
-from HudData import HudData
+from .AsteroidGenerator import AsteroidGenerator
+from .CollisionManager import CollisionManager
+from .Hud import Hud
+from .SpaceCraft import SpaceCraft
+from .HudData import HudData
 
 
 class SpaceFrenzyEngine:
